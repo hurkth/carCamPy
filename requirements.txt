@@ -1,0 +1,6 @@
+picamera2
+opencv-python
+face-recognition
+dlib
+numpy
+Pillow
