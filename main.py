@@ -44,7 +44,7 @@ def main():
         sys.exit(1)
     
     recognizer = FaceRecognizer(tolerance=0.6)
-    known = len(set(recognizer.known_names))
+    known = len(set(name for name, _ in recognizer.known_faces))
     print(f"Rostros conocidos: {known} personas\n")
     
     print("Controles: [r] Registrar | [q] Salir")
