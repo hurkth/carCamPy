@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 from cameras.camera import Camera, MainLensCamera, FisheyeCamera, InfraredCamera, list_available_cameras
 from recognition import FaceRecognizer
@@ -7,6 +8,8 @@ from config import CameraConfig
 
 def main():
     print("=== CarVidPY - Face Recognition ===\n")
+    
+    has_display = os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
     
     print("Buscando camaras...")
     devices = list_available_cameras()
@@ -37,12 +40,33 @@ def main():
     known = len(set(name for name, _ in recognizer.known_faces))
     print(f"Rostros conocidos: {known} personas\n")
     
-    print("Iniciando interfaz grafica...")
+    if has_display:
+        print("Iniciando interfaz grafica...")
+        from gui import App
+        app = App(cam, recognizer)
+        app.run()
+    else:
+        print("Sin display disponible. Modo CLI.")
+        print("Controles: [r] Registrar rostro | [q] Salir")
+        import cv2
+        while True:
+            frame = cam.read()
+            if frame is not None:
+                results = recognizer.recognize(frame)
+                frame = recognizer.draw_results(frame, results)
+                cv2.imshow("CarVidPY", frame)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                break
+            elif key == ord('r'):
+                if frame is not None:
+                    name = input("Nombre: ").strip()
+                    if name:
+                        if recognizer.register_face(frame, name):
+                            print(f"OK - '{name}' registrado!")
+        cv2.destroyAllWindows()
     
-    from gui import App
-    app = App(cam, recognizer)
-    app.run()
-    
+    cam.stop()
     print("Listo.")
 
 
