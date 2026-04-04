@@ -4,5 +4,5 @@ from config import CameraConfig
 
 
 class MainLensCamera(Camera):
-    def __init__(self, config: Optional[CameraConfig] = None):
-        super().__init__("Main", config)
+    def __init__(self, config: Optional[CameraConfig] = None, device: int = 0):
+        super().__init__(device, config)

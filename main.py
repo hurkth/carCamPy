@@ -1,63 +1,53 @@
 #!/usr/bin/env python3
 import cv2
 import sys
-import time
-from cameras.camera import Camera, list_available_cameras
-from cameras.main_lens import MainLensCamera
-from cameras.fisheye import FisheyeCamera
-from cameras.infrared import InfraredCamera
+from cameras.camera import Camera, MainLensCamera, FisheyeCamera, InfraredCamera, list_available_cameras
 from recognition import FaceRecognizer
 from config import CameraConfig
 
 
 def main():
-    print("=== CarVidPY - Face Recognition System ===\n")
-    print("Dispositivos disponibles:")
-    for dev in list_available_cameras():
+    print("=== CarVidPY - Face Recognition ===\n")
+    
+    print("Buscando camaras...")
+    devices = list_available_cameras()
+    for dev in devices:
         print(f"  - {dev}")
     print()
     
-    cameras = {}
+    if not devices:
+        print("No se encontro camara. Verifica la conexion.")
+        sys.exit(1)
     
-    print("Selecciona lente a usar:")
-    print("  [1] Principal (dia)")
-    print("  [2] Ojo de pez (360)")
-    print("  [3] Infrarrojo (noche)")
+    print("Selecciona lente:")
+    print("  [1] Principal")
+    print("  [2] Ojo de pez")
+    print("  [3] Infrarrojo")
     
     choice = input("\nOpcion (1-3): ").strip()
     
-    lens_map = {"1": ("main", MainLensCamera), "2": ("fisheye", FisheyeCamera), "3": ("infrared", InfraredCamera)}
+    lens_map = {"1": ("Principal", MainLensCamera), "2": ("Ojo de pez", FisheyeCamera), "3": ("Infrarrojo", InfraredCamera)}
     
     if choice not in lens_map:
-        print("Opcion invalida, usando lente principal.")
+        print("Invalido, usando Principal.")
         choice = "1"
     
     name, camera_class = lens_map[choice]
-    print(f"\nIniciando camara {name}...")
+    print(f"\nIniciando {name}...")
     
     try:
-        cam = camera_class(CameraConfig(width=640, height=480))
+        cam = camera_class(CameraConfig(width=640, height=480), device=0)
         cam.start()
-        cameras[name] = cam
         print("OK")
     except Exception as e:
         print(f"Error: {e}")
-        print("Intentando modo genérico...")
-        cam = Camera("unicam", CameraConfig(width=640, height=480))
-        cam.start()
-        cameras["camera"] = cam
-        name = "camera"
+        sys.exit(1)
     
-    selected_cam = name
-    cam = cameras[selected_cam]
+    recognizer = FaceRecognizer(tolerance=0.6)
+    known = len(set(recognizer.known_names))
+    print(f"Rostros conocidos: {known} personas\n")
     
-    recognizer = FaceRecognizer(tolerance=0.5)
-    known_count = len(set(recognizer.known_names))
-    print(f"\nRostros conocidos cargados: {known_count} personas")
-    
-    print("\nControles:")
-    print("  [r] Registrar rostro (captura actual)")
-    print("  [q] Salir")
+    print("Controles: [r] Registrar | [q] Salir")
     print("-" * 40)
     
     register_mode = False
@@ -65,31 +55,21 @@ def main():
     while True:
         frame = cam.read()
         if frame is not None:
-            if register_mode:
-                results = recognizer.recognize(frame)
-                frame = recognizer.draw_results(frame, results)
-            
             cv2.imshow("CarVidPY", frame)
         
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
         elif key == ord('r'):
-            register_mode = not register_mode
-            print(f"Modo registro: {'ON' if register_mode else 'OFF'}")
-            if register_mode and frame is not None:
-                results = recognizer.recognize(frame)
-                if results:
-                    name = input("Nombre: ").strip()
-                    if name and recognizer.register_face(frame, name):
-                        print(f"OK - '{name}' registrado!")
-                        register_mode = False
+            if frame is not None:
+                if recognizer.register_face(frame, ""):
+                    pass
                 else:
                     print("Sin rostro detectado")
     
     cam.stop()
     cv2.destroyAllWindows()
-    print("Sistema detenido.")
+    print("Listo.")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-from picamera2 import Picamera2
 import cv2
 import numpy as np
 from typing import Optional, List
@@ -6,44 +5,57 @@ from config import CameraConfig
 
 
 class Camera:
-    def __init__(self, name: str, config: Optional[CameraConfig] = None, sensor_id: int = 0):
-        self.name = name
+    def __init__(self, device: int = 0, config: Optional[CameraConfig] = None):
+        self.device = device
         self.config = config or CameraConfig()
-        self.sensor_id = sensor_id
-        self.cam: Optional[Picamera2] = None
+        self.cap: Optional[cv2.VideoCapture] = None
         
     def start(self):
-        from picamera2 import Picamera2
-        self.cam = Picamera2(camera_name=self.name)
-        self.cam.configure(self.cam.create_preview_configuration(
-            main={"size": (self.config.width, self.config.height)},
-            sensor=self.sensor_id
-        ))
-        self.cam.start()
+        self.cap = cv2.VideoCapture(self.device)
+        if self.config.width and self.config.height:
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.height)
+        self.cap.set(cv2.CAP_PROP_FPS, self.config.framerate)
         
     def read(self) -> Optional[np.ndarray]:
-        if self.cam:
-            frame = self.cam.capture_array()
-            frame = cv2.rotate(frame, cv2.ROTATE_180) if self.config.rotation == 180 else frame
-            if self.config.hflip:
-                frame = cv2.flip(frame, 1)
-            if self.config.vflip:
-                frame = cv2.flip(frame, 0)
-            return frame
+        if self.cap:
+            ret, frame = self.cap.read()
+            if ret:
+                if self.config.rotation == 180:
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
+                if self.config.hflip:
+                    frame = cv2.flip(frame, 1)
+                if self.config.vflip:
+                    frame = cv2.flip(frame, 0)
+                return frame
         return None
     
     def stop(self):
-        if self.cam:
-            self.cam.close()
-            self.cam = None
+        if self.cap:
+            self.cap.release()
+            self.cap = None
 
 
-def list_available_cameras() -> List[dict]:
-    import subprocess
-    
-    result = subprocess.run(['v4l2-ctl', '--list-devices'], capture_output=True, text=True)
+class MainLensCamera(Camera):
+    def __init__(self, config: Optional[CameraConfig] = None, device: int = 0):
+        super().__init__(device, config)
+
+
+class FisheyeCamera(Camera):
+    def __init__(self, config: Optional[CameraConfig] = None, device: int = 0):
+        super().__init__(device, config)
+
+
+class InfraredCamera(Camera):
+    def __init__(self, config: Optional[CameraConfig] = None, device: int = 0):
+        super().__init__(device, config)
+
+
+def list_available_cameras() -> List[str]:
     devices = []
-    for line in result.stdout.split('\n'):
-        if '/dev/video' in line:
-            devices.append(line.strip())
+    for i in range(5):
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            devices.append(f"/dev/video{i}")
+            cap.release()
     return devices
