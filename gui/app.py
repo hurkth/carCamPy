@@ -22,9 +22,10 @@ class App:
         self.frame: Optional[cv2.Mat] = None
         self.current_lens = 0
         self.lens_names = ["Principal", "Ojo de pez", "Infrarrojo"]
+        self.known_faces_list = []
         
-        self._setup_ui()
         self._load_known_faces()
+        self._setup_ui()
         self._start_video_thread()
         
     def _setup_ui(self):
