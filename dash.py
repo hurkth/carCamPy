@@ -45,10 +45,7 @@ class E36Dashboard(ctk.CTk):
         # --- INICIALIZACIÓN DE CÁMARA ---
         # Cambia este 0 por 1 o 2 si estás apuntando a la cámara equivocada del set
         self.camera_index = 0
-        self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_V4L2)
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap = cv2.VideoCapture(self.camera_index)
         
         # Detector de rostros de OpenCV
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
